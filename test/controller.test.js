@@ -52,7 +52,7 @@ function harness(t, fetch = async () => usage, values = {}) {
 test('startup, status, accessibility, commands, timer and repeated start', async t => {
   const h = harness(t);
   h.controller.start(); h.controller.start();
-  assert.equal(h.item.text, 'Kiro');
+  assert.equal(h.item.text, '⚪ Kiro');
   await tick();
   assert.equal(h.calls.length, 1);
   assert.equal(h.item.text, '🟢 25/100 · 25%');
@@ -104,6 +104,97 @@ test('retry preserves the error display until a new result arrives', async t => 
   d.resolve(usage); await request;
   assert.equal(h.item.text, '🟢 25/100 · 25%');
 });
+
+for (const percent of [25, 60, 95, null]) {
+  test(`manual refresh replaces only the status icon at ${percent}%`, async t => {
+    const d = deferred(); let count = 0;
+    const value = { used: percent ?? 0, total: percent === null ? 0 : 100, percent };
+    const h = harness(t, () => ++count === 1 ? Promise.resolve(value) : d.promise);
+    h.controller.start(); await tick();
+    const before = { ...h.item };
+    const request = h.commands.get('kiro-usage.refresh')();
+    assert.equal(h.item.text, '$(loading~spin)' + before.text.slice(before.text.indexOf(' ')));
+    assert.equal(h.item.tooltip, before.tooltip);
+    assert.equal(h.item.backgroundColor, before.backgroundColor);
+    assert.equal(h.item.accessibilityInformation, before.accessibilityInformation);
+    d.resolve(value); await request;
+    assert.equal(h.item.text, before.text);
+    assert.equal(h.controller.getStatus().refreshing, false);
+  });
+}
+
+test('click during automatic refresh shows one spinner and shares the running request', async t => {
+  const d = deferred(); let count = 0;
+  const h = harness(t, () => ++count === 1 ? Promise.resolve(usage) : d.promise);
+  h.controller.start(); await tick();
+  h.fire(); await tick();
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
+  const command = h.commands.get('kiro-usage.refresh');
+  const a = command(), b = command();
+  assert.equal(a, b);
+  assert.equal(h.calls.length, 2);
+  assert.equal(h.item.text, '$(loading~spin) 25/100 · 25%');
+  d.resolve(usage); await a;
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
+  assert.equal(h.timers.size, 1);
+});
+
+test('click during first load uses the reserved icon slot', async t => {
+  const d = deferred(); const h = harness(t, () => d.promise);
+  h.controller.start();
+  assert.equal(h.item.text, '⚪ Kiro');
+  const request = h.commands.get('kiro-usage.refresh')();
+  assert.equal(h.item.text, '$(loading~spin) Kiro');
+  d.resolve(usage); await request;
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
+});
+
+test('manual failure clears the spinner; retry replaces only the warning icon', async t => {
+  let d = deferred(); let count = 0;
+  const h = harness(t, () => ++count === 1 ? Promise.resolve(usage) : d.promise);
+  h.controller.start(); await tick();
+  const first = h.commands.get('kiro-usage.refresh')();
+  await tick(); d.reject(new UsageError('timeout')); await first;
+  assert.equal(h.item.text, '$(warning) 25/100 · 25% (stale)');
+  assert.equal(h.warnings.length, 1);
+  d = deferred();
+  const retry = h.commands.get('kiro-usage.refresh')();
+  assert.equal(h.item.text, '$(loading~spin) 25/100 · 25% (stale)');
+  d.resolve(usage); await retry;
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
+});
+
+test('manual retry without a local CLI keeps the error text and restores warning', async t => {
+  const d = deferred(); let count = 0;
+  const h = harness(t, () => ++count === 1 ? Promise.reject(new UsageError('missing')) : d.promise);
+  h.controller.start(); await tick();
+  const before = { ...h.item };
+  const retry = h.commands.get('kiro-usage.refresh')();
+  assert.equal(h.item.text, before.text.replace('$(warning)', '$(loading~spin)'));
+  assert.equal(h.item.tooltip, before.tooltip);
+  await tick(); d.reject(new UsageError('missing')); await retry;
+  assert.equal(h.item.text, before.text);
+  assert.equal(h.warnings.length, 1);
+});
+
+for (const changePath of [false, true]) {
+  test(`configuration change clears manual spinner (change path: ${changePath})`, async t => {
+    const old = deferred(), next = deferred(); let count = 0;
+    const h = harness(t, () => ++count === 1 ? Promise.resolve(usage) : count === 2 ? old.promise : next.promise);
+    h.controller.start(); await tick();
+    const manual = h.commands.get('kiro-usage.refresh')(); await tick();
+    assert.equal(h.item.text, '$(loading~spin) 25/100 · 25%');
+    h.change(changePath ? { cliPath: '/new/kiro-cli' } : { timeoutSeconds: 60 });
+    assert.equal(h.calls[1][1].aborted, true);
+    const expected = changePath ? '⚪ Kiro' : '🟢 25/100 · 25%';
+    assert.equal(h.item.text, expected);
+    old.resolve({ used: 95, total: 100, percent: 95 }); await manual;
+    assert.equal(h.item.text, expected);
+    next.resolve(usage); await tick();
+    assert.equal(h.item.text, '🟢 25/100 · 25%');
+  });
+}
 test('missing CLI is silent in background, retries and recovers', async t => {
   let missing = true;
   const h = harness(t, async () => { if (missing) throw new UsageError('missing'); return usage; });

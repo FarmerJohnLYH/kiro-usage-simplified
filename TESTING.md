@@ -4,11 +4,11 @@ Verified / 验证日期：2026-11-08（Asia/Shanghai，UTC+8）。
 
 ## Result / 结果
 
-- **120 / 120** automated unit and child-process tests passed for 0.1.1; no skipped tests. / 0.1.1 的 120 项单元及真实子进程测试全部通过，无跳过项。
-- `src/` coverage: **100% lines, 96.69% branches, 97.14% functions**. These percentages exclude the VS Code entrypoint, test runners and packaging scripts. / 覆盖率仅统计核心模块，不把入口及测试、打包脚本计入分母。
-- 0.1.1 adds regression checks that pending refreshes preserve the current usage/error text, severity color, tooltip and accessibility label. / 0.1.1 新增回归检查：刷新期间保留当前用量或错误提示，以及颜色、悬停说明和无障碍标签。
-- Baseline 0.1.0 extension-host scenarios passed on Windows x64 with **VS Code 1.85.2 / Node 18.15.0** and **VS Code 1.111.0 / Node 22.22.0**. / 0.1.0 基线已通过两个真实 VS Code 版本的宿主场景。
-- The 0.1.0 VSIX passed missing-CLI verification on 1.85.2. The 0.1.1 VSIX passed live-usage verification on 1.111.0 with **Kiro CLI 3.1.0**. / 0.1.0 安装包通过最低版本缺失 CLI 测试；0.1.1 安装包通过当前版本真实用量测试。
+- **130 / 130** automated unit and child-process tests passed for 0.1.2; no skipped tests. / 0.1.2 的 130 项单元及真实子进程测试全部通过，无跳过项。
+- `src/` coverage: **100% lines, 96.26% branches, 97.22% functions**. These percentages exclude the VS Code entrypoint, test runners and packaging scripts. / 覆盖率仅统计核心模块，不把入口及测试、打包脚本计入分母。
+- 0.1.2 checks manual icon replacement at all usage levels, zero quota, first load, missing CLI and stale data; clicks during automatic refresh share the request; completion or settings changes clear the spinner. Background refresh preserves text, color, tooltip and accessibility. / 0.1.2 覆盖各阈值、零额度、初次加载、无 CLI 和旧数据的手动图标替换，自动刷新中点击复用请求，完成或配置变化后清除旋转图标；自动刷新保持显示不变。
+- 0.1.2 extension-host scenarios passed on Windows x64 with **VS Code 1.85.2 / Node 18.15.0** and **VS Code 1.111.0 / Node 22.22.0**, including the manual spinner and quiet automatic refresh. / 0.1.2 已通过两个真实 VS Code 版本的宿主场景，包括主动刷新旋转图标与自动刷新静默显示。
+- The 0.1.0 VSIX passed missing-CLI verification on 1.85.2. The 0.1.2 VSIX passed live-usage verification on 1.111.0 with **Kiro CLI 3.1.0**. / 0.1.0 安装包通过最低版本缺失 CLI 测试；0.1.2 安装包通过当前版本真实用量测试。
 - The real CLI returned supported usage without requiring another sign-in during this run. No raw response, token or account identity was stored in fixtures or this record. / 本次真实调用无需再次登录，未把原始响应、令牌或账号身份写入测试样例和本记录。
 - `npm audit` and `npm audit --omit=dev`: **0 vulnerabilities** at verification time. / 全量及运行时依赖审计均为 0 项漏洞。
 - Publisher / 发布者：`YuanhaoLiu`; extension ID / 扩展 ID：`YuanhaoLiu.kiro-usage-simplified`。
@@ -27,6 +27,7 @@ Verified / 验证日期：2026-11-08（Asia/Shanghai，UTC+8）。
 | Executable selection / 路径 | Paths containing spaces, home expansion, bad relative/quoted paths, Windows wrappers; workspace executable override ignored / 空格、主目录展开、非法相对或引号路径、Windows 包装脚本、忽略工作区路径覆盖 | Unit + real host fixture executable / 单元及宿主可执行文件 |
 | Settings / 设置 | Defaults, 0/1/4/5.8/86401, negative/string/NaN/Infinity/null; timeout bounds; live changes / 默认值、禁用与截断、非法类型、超时边界和实时变更 | Unit + hosts / 单元及宿主 |
 | Polling / 轮询 | Startup, manual-only, completion-based delay, one active request, simultaneous clicks, no duplicate error notifications / 启动、仅手动、完成后计时、单请求、连点和通知去重 | Unit + hosts / 单元及宿主 |
+| Refresh indicator / 刷新图标 | Replace only the leading icon on manual refresh; preserve usage, tooltip, background and accessibility; background refresh stays quiet / 主动刷新只替换首个图标，保留用量、提示、背景及无障碍标签，自动刷新静默 | Unit + delayed CLI in real hosts / 单元及宿主延迟 CLI |
 | Recovery / 恢复 | Failure after success is stale; last success time retained; next success clears errors; path change drops old account values / 失败标旧、保留成功时间、恢复清错、换路径清缓存 | Unit + hosts / 单元及宿主 |
 | Lifecycle / 生命周期 | Abort on settings change and disposal; ignore late success/rejection; dispose timers, commands, output, UI; repeated start/dispose / 设置变化及退出取消、丢弃过期结果、释放资源、幂等启停 | `test/controller.test.js` |
 | Trust / 信任 | No CLI execution while untrusted; granting trust starts refresh; executable restricted to machine settings / 未信任不执行、信任后启动、路径仅来自机器设置 | Mocked VS Code API + manifest assertions / 模拟 API 与清单检查 |
@@ -65,6 +66,7 @@ Tests use `.vscode-test/` for downloaded editors, synthetic executables and isol
 - Authentication failures and expiry are simulated; the real CLI was already able to return usage. No sign-out was performed to force a failure. / 认证失败和过期采用模拟场景；没有主动退出真实账号。
 - Restricted Mode is tested at controller/manifest level; the integration runners use trusted isolated profiles. / 受限模式验证限于控制器和清单层，集成测试使用可信独立配置。
 - Status text and background colors are asserted via API; this is not a pixel-level visual audit across themes, DPI levels or screen readers. / 状态文本和颜色通过 API 断言，未逐像素验收所有主题、缩放和读屏器。
+- Manual refresh never appends text. Emoji circles and the native spinner use different fonts, so identical pixel width is not guaranteed by the VS Code API. A headless Chromium check using this Windows installation's Segoe UI and VS Code Codicon fonts measured a 0.484375 CSS-pixel difference. / 主动刷新不追加文字；emoji 圆点和原生旋转图标字体不同，VS Code API 无法保证逐像素等宽。本机使用 Segoe UI 与 VS Code Codicon 字体的无头 Chromium 测量差为 0.484375 CSS 像素。
 - There is no guarantee that future CLI output will retain this format. Unsupported formats produce a clear error instead of a fabricated quota. / 后续 CLI 格式可能变化，不兼容时明确报错。
 - Public source: https://github.com/FarmerJohnLYH/kiro-usage-simplified. / 公开源码使用独立仓库。
 - This record covers local build and installation verification; publication status is shown by GitHub Releases and the Marketplace listing. / 本记录描述本地构建与安装验收，发布状态以 GitHub Releases 和市场页面为准。

@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 0.1.2
+
+- Manual refresh replaces the existing status icon with a spinner and keeps the usage text unchanged. Automatic refresh remains quiet.
+- 主动刷新时仅将状态图标替换为旋转图标，保留用量文字；自动刷新保持静默。
+
 ## 0.1.1
 
 - Keep the current status bar text, color and tooltip while refreshing; remove the updating label and spinner.

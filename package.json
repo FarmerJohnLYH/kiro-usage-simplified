@@ -2,7 +2,7 @@
   "name": "kiro-usage-simplified",
   "displayName": "Kiro Usage (Simplified)",
   "description": "Kiro credit usage in your status bar, with safe retries and clear CLI setup guidance.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "YuanhaoLiu",
   "license": "MIT",
   "repository": {

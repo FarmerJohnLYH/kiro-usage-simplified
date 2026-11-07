@@ -32,6 +32,21 @@ async function run() {
   await waitFor(() => status().text === '🟢 25/100 · 25%', 'recovery after setting executable path');
   console.log('PASS: configuration change recovers using executable path with spaces');
   const mode = value => fs.writeFileSync(path.join(process.env.KIRO_USAGE_TEST_FIXTURE, 'mode.txt'), value);
+  mode('slow');
+  const before = status();
+  const refreshing = vscode.commands.executeCommand('kiro-usage.refresh');
+  await waitFor(() => status().text === '$(loading~spin) 25/100 · 25%', 'manual refresh icon');
+  assert.equal(status().tooltip, before.tooltip);
+  await refreshing;
+  assert.equal(status().text, before.text);
+  console.log('PASS: manual refresh replaces only the icon and restores it on completion');
+
+  await configuration.update('timeoutSeconds', 6, vscode.ConfigurationTarget.Global);
+  await waitFor(() => status().refreshing, 'background refresh started');
+  assert.equal(status().text, before.text);
+  await waitFor(() => !status().refreshing, 'background refresh completed');
+  console.log('PASS: background refresh keeps the status icon unchanged');
+
   mode('high');
   await vscode.commands.executeCommand('kiro-usage.refresh');
   assert.equal(status().text, '🔴 95/100 · 95%');
@@ -52,7 +67,7 @@ async function run() {
   await waitFor(() => status().errorCode === 'format', 'unsupported output');
   console.log('PASS: unsupported output');
   mode('timeout');
-  await configuration.update('timeoutSeconds', 6, vscode.ConfigurationTarget.Global);
+  await configuration.update('timeoutSeconds', 5, vscode.ConfigurationTarget.Global);
   await waitFor(() => status().errorCode === 'timeout', 'process timeout');
   console.log('PASS: actual process timeout');
 

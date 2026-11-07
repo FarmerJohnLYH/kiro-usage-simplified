@@ -69,9 +69,22 @@ function createController(vscode, dependencies = {}) {
     }
   }
 
-  function refresh() {
+  function showManualProgress(request) {
+    if (request.previousText !== undefined) return;
+    // Replace the existing icon only; keep the usage, hover and accessible label stable.
+    const text = item.text.replace(/^(?:🟢|🟡|🔴|⚪|\$\(warning\))(?= )/u, '$(loading~spin)');
+    if (text !== item.text) {
+      request.previousText = item.text;
+      item.text = text;
+    }
+  }
+
+  function refresh(manual = false) {
     if (disposed) return Promise.resolve();
-    if (pending) return pending.promise;
+    if (pending) {
+      if (manual) showManualProgress(pending);
+      return pending.promise;
+    }
     clearTimer();
     if (!vscode.workspace.isTrusted) {
       show('$(lock) Kiro: Workspace untrusted', 'Trust this workspace before running Kiro CLI.');
@@ -80,7 +93,8 @@ function createController(vscode, dependencies = {}) {
     const request = { abort: new AbortController() };
     const requestSettings = settings;
     pending = request;
-    if (!lastSuccess && !lastError) show('Kiro', 'Kiro credit usage\nClick to refresh');
+    if (!lastSuccess && !lastError) show('⚪ Kiro', 'Kiro credit usage\nClick to refresh');
+    if (manual) showManualProgress(request);
     request.promise = Promise.resolve().then(() => fetch(requestSettings, request.abort.signal)).then(usage => {
       if (disposed || pending !== request) return;
       lastSuccess = { usage, at: now() };
@@ -102,7 +116,7 @@ function createController(vscode, dependencies = {}) {
   }
 
   async function runManualRefresh() {
-    await refresh();
+    await refresh(true);
     if (disposed || !lastError) return;
     const action = await vscode.window.showWarningMessage(`Kiro Usage: ${lastError.label}. ${lastError.message}`, 'Open Settings', 'Installation Guide');
     if (disposed) return;
@@ -124,6 +138,7 @@ function createController(vscode, dependencies = {}) {
     if (pending) {
       const old = pending;
       pending = undefined;
+      if (old.previousText !== undefined) item.text = old.previousText;
       old.abort.abort();
     }
     return refresh();
