@@ -1,0 +1,8 @@
+**/*
+!package.json
+!extension.js
+!src/usage.js
+!src/controller.js
+!README.md
+!CHANGELOG.md
+!LICENSE

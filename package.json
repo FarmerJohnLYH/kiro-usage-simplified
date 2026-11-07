@@ -1,0 +1,84 @@
+{
+  "name": "kiro-usage-simplified",
+  "displayName": "Kiro Usage (Simplified)",
+  "description": "Kiro credit usage in your status bar, with safe retries and clear CLI setup guidance.",
+  "version": "0.1.0",
+  "publisher": "YuanhaoLiu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FarmerJohnLYH/kiro-usage-simplified.git"
+  },
+  "homepage": "https://github.com/FarmerJohnLYH/kiro-usage-simplified#readme",
+  "bugs": { "url": "https://github.com/FarmerJohnLYH/kiro-usage-simplified/issues" },
+  "keywords": ["kiro", "credits", "usage", "status bar", "quota"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "extensionKind": ["workspace"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": false, "description": "This extension executes the locally configured Kiro CLI." },
+    "virtualWorkspaces": { "supported": false }
+  },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
+    "test:integration": "node test/integration/run.js",
+    "test:package": "node test/integration/package-run.js",
+    "vscode:prepublish": "npm run check && npm test",
+    "package": "vsce package --no-dependencies --githubBranch main --out dist/",
+    "package:list": "vsce ls --no-dependencies",
+    "release:check": "node scripts/check.js --release",
+    "publish:marketplace": "npm run release:check && vsce publish --no-dependencies --githubBranch main"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.1.0"
+  },
+  "overrides": {
+    "@vscode/vsce": { "minimatch": "11.0.2" }
+  },
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "kiro-usage.refresh",
+        "title": "Kiro Usage: Refresh"
+      },
+      {
+        "command": "kiro-usage.openSettings",
+        "title": "Kiro Usage: Open Settings"
+      }
+    ],
+    "configuration": {
+      "title": "Kiro Usage",
+      "properties": {
+        "kiro-usage.refreshIntervalSeconds": {
+          "type": "integer",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 86400,
+          "scope": "window",
+          "description": "Seconds to wait after each refresh. 0 disables automatic refresh; values 1–4 are treated as 5."
+        },
+        "kiro-usage.cliPath": {
+          "type": "string",
+          "default": "kiro-cli",
+          "scope": "machine",
+          "description": "Executable name on PATH or absolute Kiro CLI path on the extension host. No quotes or arguments. Windows requires an .exe."
+        },
+        "kiro-usage.timeoutSeconds": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 120,
+          "scope": "window",
+          "description": "Maximum time allowed for one CLI request, in seconds."
+        }
+      }
+    }
+  }
+}
