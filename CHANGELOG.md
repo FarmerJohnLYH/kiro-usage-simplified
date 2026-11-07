@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 0.1.1
+
+- Keep the current status bar text, color and tooltip while refreshing; remove the updating label and spinner.
+- 刷新期间保留当前状态栏文字、颜色和提示，移除 updating 标签与旋转图标。
+
 ## 0.1.0
 
 - Show Kiro credit usage, percentage and threshold colors in the status bar.

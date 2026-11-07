@@ -4,10 +4,11 @@ Verified / 验证日期：2026-11-08（Asia/Shanghai，UTC+8）。
 
 ## Result / 结果
 
-- **118 / 118** automated unit and child-process tests passed; no skipped tests. / 118 项单元及真实子进程测试全部通过，无跳过项。
-- `src/` coverage: **100% lines, 96.67% branches, 97.14% functions**. These percentages exclude the VS Code entrypoint, test runners and packaging scripts. / 覆盖率仅统计核心模块，不把入口及测试、打包脚本计入分母。
-- Real extension-host scenarios passed on Windows x64 with **VS Code 1.85.2 / Node 18.15.0** and **VS Code 1.111.0 / Node 22.22.0**. / 两个真实 VS Code 版本的宿主场景均通过。
-- The installed VSIX passed missing-CLI verification on 1.85.2 and live-usage verification on 1.111.0 with **Kiro CLI 3.1.0**. / 安装包通过最低版本缺失 CLI 测试及当前版本真实用量测试。
+- **120 / 120** automated unit and child-process tests passed for 0.1.1; no skipped tests. / 0.1.1 的 120 项单元及真实子进程测试全部通过，无跳过项。
+- `src/` coverage: **100% lines, 96.69% branches, 97.14% functions**. These percentages exclude the VS Code entrypoint, test runners and packaging scripts. / 覆盖率仅统计核心模块，不把入口及测试、打包脚本计入分母。
+- 0.1.1 adds regression checks that pending refreshes preserve the current usage/error text, severity color, tooltip and accessibility label. / 0.1.1 新增回归检查：刷新期间保留当前用量或错误提示，以及颜色、悬停说明和无障碍标签。
+- Baseline 0.1.0 extension-host scenarios passed on Windows x64 with **VS Code 1.85.2 / Node 18.15.0** and **VS Code 1.111.0 / Node 22.22.0**. / 0.1.0 基线已通过两个真实 VS Code 版本的宿主场景。
+- The 0.1.0 VSIX passed missing-CLI verification on 1.85.2. The 0.1.1 VSIX passed live-usage verification on 1.111.0 with **Kiro CLI 3.1.0**. / 0.1.0 安装包通过最低版本缺失 CLI 测试；0.1.1 安装包通过当前版本真实用量测试。
 - The real CLI returned supported usage without requiring another sign-in during this run. No raw response, token or account identity was stored in fixtures or this record. / 本次真实调用无需再次登录，未把原始响应、令牌或账号身份写入测试样例和本记录。
 - `npm audit` and `npm audit --omit=dev`: **0 vulnerabilities** at verification time. / 全量及运行时依赖审计均为 0 项漏洞。
 - Publisher / 发布者：`YuanhaoLiu`; extension ID / 扩展 ID：`YuanhaoLiu.kiro-usage-simplified`。

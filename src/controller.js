@@ -80,7 +80,7 @@ function createController(vscode, dependencies = {}) {
     const request = { abort: new AbortController() };
     const requestSettings = settings;
     pending = request;
-    show(lastSuccess ? `$(sync~spin) ${formatUsage(lastSuccess.usage)} (updating)` : '$(sync~spin) Kiro: Loading…', 'Refreshing Kiro credit usage…');
+    if (!lastSuccess && !lastError) show('Kiro', 'Kiro credit usage\nClick to refresh');
     request.promise = Promise.resolve().then(() => fetch(requestSettings, request.abort.signal)).then(usage => {
       if (disposed || pending !== request) return;
       lastSuccess = { usage, at: now() };

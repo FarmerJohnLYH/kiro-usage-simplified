@@ -52,7 +52,7 @@ function harness(t, fetch = async () => usage, values = {}) {
 test('startup, status, accessibility, commands, timer and repeated start', async t => {
   const h = harness(t);
   h.controller.start(); h.controller.start();
-  assert.match(h.item.text, /Loading/);
+  assert.equal(h.item.text, 'Kiro');
   await tick();
   assert.equal(h.calls.length, 1);
   assert.equal(h.item.text, '🟢 25/100 · 25%');
@@ -81,6 +81,28 @@ test('manual-only mode still refreshes on start and command', async t => {
   assert.equal(h.timers.size, 0);
   await h.commands.get('kiro-usage.refresh')();
   assert.equal(h.calls.length, 2); assert.equal(h.timers.size, 0);
+});
+test('refresh preserves usage, severity, tooltip and accessibility until completion', async t => {
+  const d = deferred(); let count = 0;
+  const h = harness(t, () => ++count === 1 ? Promise.resolve({ used: 95, total: 100, percent: 95 }) : d.promise);
+  h.controller.start(); await tick();
+  const before = { text: h.item.text, tooltip: h.item.tooltip, backgroundColor: h.item.backgroundColor, accessibilityInformation: h.item.accessibilityInformation };
+  const request = h.controller.refresh(); await tick();
+  assert.ok(h.controller.getStatus().refreshing);
+  assert.deepEqual({ text: h.item.text, tooltip: h.item.tooltip, backgroundColor: h.item.backgroundColor, accessibilityInformation: h.item.accessibilityInformation }, before);
+  d.resolve(usage); await request;
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
+  assert.equal(h.item.backgroundColor, undefined);
+});
+test('retry preserves the error display until a new result arrives', async t => {
+  const d = deferred(); let count = 0;
+  const h = harness(t, () => ++count === 1 ? Promise.reject(new UsageError('missing')) : d.promise);
+  h.controller.start(); await tick();
+  const before = { text: h.item.text, tooltip: h.item.tooltip, backgroundColor: h.item.backgroundColor };
+  const request = h.controller.refresh(); await tick();
+  assert.deepEqual({ text: h.item.text, tooltip: h.item.tooltip, backgroundColor: h.item.backgroundColor }, before);
+  d.resolve(usage); await request;
+  assert.equal(h.item.text, '🟢 25/100 · 25%');
 });
 test('missing CLI is silent in background, retries and recovers', async t => {
   let missing = true;
