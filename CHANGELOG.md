@@ -1,3 +1,8 @@
+## 1.0.0
+
+- Release the daily credit calendar with the purple ghost-and-chart extension icon.
+- Preserve the existing status bar appearance and theme-aware calendar.
+
 ## 0.2.2
 
 - Remove the calendar detail footer, divider lines and last-collected information.
