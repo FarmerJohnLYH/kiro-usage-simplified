@@ -12,7 +12,7 @@ async function main() {
   const candidates = [path.join(codeDir, relative), ...fs.readdirSync(codeDir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => path.join(codeDir, entry.name, relative))];
   const cli = candidates.find(file => fs.existsSync(file));
   if (!cli) throw new Error('Cannot locate VS Code CLI script beside ' + code);
-  const base = path.join(root, '.vscode-test', process.env.KIRO_USAGE_LIVE_CLI ? 'packaged-live' : 'packaged-missing', manifest.publisher);
+  const base = path.join(process.env.KIRO_USAGE_TEST_ROOT || path.join(root, '.vscode-test'), process.env.KIRO_USAGE_LIVE_CLI ? 'packaged-live' : 'packaged-missing', manifest.publisher);
   const profile = path.join(base, 'profile');
   const extensions = path.join(base, 'extensions');
   fs.mkdirSync(path.join(profile, 'User'), { recursive: true });

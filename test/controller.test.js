@@ -37,7 +37,9 @@ function harness(t, fetch = async () => usage, values = {}) {
     env: { openExternal: async uri => external.push(uri) }, Uri: { parse: url => url },
   };
   const calls = [];
+  const opened = [];
   const controller = createController(vscode, {
+    openCalendar: () => opened.push(true),
     fetchUsage: (...args) => { calls.push(args); return fetch(...args); },
     now: () => new Date('2026-11-08T04:00:00Z'),
     setTimeout: (fn, ms) => { timers.set(++nextTimer, { fn, ms }); return nextTimer; },
@@ -46,7 +48,7 @@ function harness(t, fetch = async () => usage, values = {}) {
   t.after(() => controller.dispose());
   const change = (newValues, relevant = true) => { Object.assign(values, newValues); configListener({ affectsConfiguration: () => relevant }); };
   const fire = () => { const [id, timer] = [...timers][0]; timers.delete(id); timer.fn(); };
-  return { controller, item, commands, timers, logs, warnings, external, executions, values, calls, output, change, fire, trust: () => { vscode.workspace.isTrusted = true; trustListener(); } };
+  return { controller, opened, item, commands, timers, logs, warnings, external, executions, values, calls, output, change, fire, trust: () => { vscode.workspace.isTrusted = true; trustListener(); } };
 }
 
 test('startup, status, accessibility, commands, timer and repeated start', async t => {
@@ -56,11 +58,11 @@ test('startup, status, accessibility, commands, timer and repeated start', async
   await tick();
   assert.equal(h.calls.length, 1);
   assert.equal(h.item.text, '🟢 25/100 · 25%');
-  assert.equal(h.item.command, 'kiro-usage.refresh');
+  assert.equal(h.item.command, 'kiro-usage.statusClick');
   assert.match(h.item.accessibilityInformation.label, /25\/100/);
   assert.equal(h.timers.size, 1);
   assert.equal([...h.timers.values()][0].ms, 60000);
-  assert.equal(h.commands.size, 2);
+  assert.equal(h.commands.size, 4);
   assert.equal(h.warnings.length, 0);
 });
 test('poll only after completion; concurrent refreshes share a request', async t => {
@@ -305,4 +307,14 @@ test('repeated clicks coalesce both CLI requests and failure notifications', asy
   await tick(); d.reject(new UsageError('auth'));
   await Promise.all([first, second]);
   assert.equal(h.calls.length, 1); assert.equal(h.warnings.length, 1);
+});
+
+test('double status click opens calendar without changing status or refreshing',async t=>{
+  const h=harness(t);h.controller.start();await tick();const before={...h.item};
+  const click=h.commands.get('kiro-usage.statusClick');click();click();await tick();
+  assert.equal(h.opened.length,1);assert.equal(h.calls.length,1);assert.equal(h.item.text,before.text);assert.equal(h.item.backgroundColor,before.backgroundColor);assert.equal(h.timers.size,1);
+});
+test('single status click refreshes after double-click window',async t=>{
+  const h=harness(t);h.controller.start();await tick();h.commands.get('kiro-usage.statusClick')();
+  const [id,timer]=[...h.timers].find(([,timer])=>timer.ms===450);h.timers.delete(id);timer.fn();await tick();assert.equal(h.calls.length,2);
 });

@@ -1,0 +1,15 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const os=require('node:os');
+const path=require('node:path');
+const {accumulate,category,createHistory,dayKey}=require('../src/history');
+const date=(day,hour=12)=>new Date(2026,10,day,hour);
+const usage=(used,total=220)=>({used,total});
+test('threshold equality belongs to lower band and zero quota stays unknown',()=>{assert.equal(category(8,220),'green');assert.equal(category(8.001,220),'yellow');assert.equal(category(20,220),'yellow');assert.equal(category(20.001,220),'red');assert.equal(category(0,0),'unknown');});
+test('first observation is a baseline, repeated readings do not double count',()=>{let s=accumulate(null,usage(100),date(1));s=accumulate(s,usage(103),date(1,13));s=accumulate(s,usage(103),date(1,14));assert.equal(s.days[dayKey(date(1))].used,3);assert.equal(s.days[dayKey(date(1))].partial,true);assert.deepEqual(accumulate(s,usage(200),date(1,11)),s);});
+test('midnight increment belongs to previous calendar day, including multi-day gaps',()=>{let s=accumulate(null,usage(100),date(1,23));s=accumulate(s,usage(110),date(2,0));assert.equal(s.days[dayKey(date(1))].used,10);assert.equal(s.days[dayKey(date(2))].used,0);assert.equal(s.gaps.length,0);s=accumulate(s,usage(120),date(5));assert.equal(s.days[dayKey(date(4))].used,10);assert.equal(s.days[dayKey(date(5))].used,0);assert.equal(s.days[dayKey(date(3))],undefined);s=accumulate(s,usage(122),date(5,13));assert.equal(s.days[dayKey(date(5))].used,2);});
+test('month boundary consumption is credited to last day of previous month',()=>{let s=accumulate(null,usage(10),new Date(2026,10,30,23,59));s=accumulate(s,usage(13),new Date(2026,11,1,0,1));assert.equal(s.days['2026-11-30'].used,3);assert.equal(s.days['2026-12-01'].used,0);assert.equal(s.gaps.length,0);});
+test('reset, plan changes and time zone changes start a new baseline',()=>{let s=accumulate(null,usage(100),date(1));s=accumulate(s,usage(1),date(1,13));s=accumulate(s,usage(5,500),date(1,14));s=accumulate(s,usage(6,500),date(1,15),'Europe/London');assert.equal(s.days[dayKey(date(1))].used,0);assert.equal(s.gaps.length,3);assert.equal(s.gaps[0].reason,'reset');assert.equal(s.gaps[2].reason,'timezone');});
+test('persistent history serializes multiple writers and survives reopening',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'kiro-history-'));try{const a=createHistory(dir),b=createHistory(dir);await a.record(usage(10),date(1));await Promise.all([a.record(usage(12),date(1,13)),b.record(usage(12),date(1,13))]);const s=await createHistory(dir).read();assert.equal(s.days[dayKey(date(1))].used,2);}finally{await fs.rm(dir,{recursive:true,force:true});}});
+test('corrupt history fails without erasing user data',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'kiro-history-'));try{const file=path.join(dir,'daily-usage-v1.json');await fs.writeFile(file,'broken');await assert.rejects(createHistory(dir).record(usage(10),date(1)));assert.equal(await fs.readFile(file,'utf8'),'broken');}finally{await fs.rm(dir,{recursive:true,force:true});}});

@@ -1,3 +1,18 @@
+## 0.2.2
+
+- Remove the calendar detail footer, divider lines and last-collected information.
+
+## 0.2.1
+
+- Attribute cross-midnight increments to the previous calendar day.
+- Simplify calendar UI by removing explanatory notes, partial-record asterisks, timezone subtitle and legend.
+
+## 0.2.0
+
+- Add a theme-aware full-month daily credit calendar, opened by double-clicking the existing status bar or a command.
+- Persist local daily deltas with serialized cross-window writes; distinguish partial records, midnight gaps and quota resets.
+- Use plan quota for traffic-light thresholds; preserve existing status bar appearance.
+
 # Changelog / 更新日志
 
 ## 0.1.2

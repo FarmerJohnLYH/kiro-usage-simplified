@@ -2,7 +2,7 @@
   "name": "kiro-usage-simplified",
   "displayName": "Kiro Usage (Simplified)",
   "description": "Kiro credit usage in your status bar, with safe retries and clear CLI setup guidance.",
-  "version": "0.1.2",
+  "version": "0.2.2",
   "publisher": "YuanhaoLiu",
   "license": "MIT",
   "repository": {
@@ -10,17 +10,34 @@
     "url": "https://github.com/FarmerJohnLYH/kiro-usage-simplified.git"
   },
   "homepage": "https://github.com/FarmerJohnLYH/kiro-usage-simplified#readme",
-  "bugs": { "url": "https://github.com/FarmerJohnLYH/kiro-usage-simplified/issues" },
-  "keywords": ["kiro", "credits", "usage", "status bar", "quota"],
+  "bugs": {
+    "url": "https://github.com/FarmerJohnLYH/kiro-usage-simplified/issues"
+  },
+  "keywords": [
+    "kiro",
+    "credits",
+    "usage",
+    "status bar",
+    "quota"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "main": "./extension.js",
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "capabilities": {
-    "untrustedWorkspaces": { "supported": false, "description": "This extension executes the locally configured Kiro CLI." },
-    "virtualWorkspaces": { "supported": false }
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "This extension executes the locally configured Kiro CLI."
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
   },
   "scripts": {
     "check": "node scripts/check.js",
@@ -39,9 +56,13 @@
     "@vscode/vsce": "4.1.0"
   },
   "overrides": {
-    "@vscode/vsce": { "minimatch": "11.0.2" }
+    "@vscode/vsce": {
+      "minimatch": "11.0.2"
+    }
   },
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
       {
@@ -51,6 +72,10 @@
       {
         "command": "kiro-usage.openSettings",
         "title": "Kiro Usage: Open Settings"
+      },
+      {
+        "command": "kiro-usage.openCalendar",
+        "title": "Kiro Usage: Open Daily Calendar"
       }
     ],
     "configuration": {
@@ -79,6 +104,38 @@
           "description": "Maximum time allowed for one CLI request, in seconds."
         }
       }
-    }
+    },
+    "colors": [
+      {
+        "id": "kiroUsage.calendarLow",
+        "description": "Low daily credit usage",
+        "defaults": {
+          "dark": "#34A853",
+          "light": "#34A853",
+          "highContrast": "#34A853",
+          "highContrastLight": "#34A853"
+        }
+      },
+      {
+        "id": "kiroUsage.calendarMedium",
+        "description": "Medium daily credit usage",
+        "defaults": {
+          "dark": "#FBBC05",
+          "light": "#FBBC05",
+          "highContrast": "#FBBC05",
+          "highContrastLight": "#FBBC05"
+        }
+      },
+      {
+        "id": "kiroUsage.calendarHigh",
+        "description": "High daily credit usage",
+        "defaults": {
+          "dark": "#EA4335",
+          "light": "#EA4335",
+          "highContrast": "#EA4335",
+          "highContrastLight": "#EA4335"
+        }
+      }
+    ]
   }
 }

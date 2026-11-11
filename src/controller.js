@@ -9,7 +9,7 @@ function createController(vscode, dependencies = {}) {
   const now = dependencies.now || (() => new Date());
   const item = vscode.window.createStatusBarItem('kiro-usage', vscode.StatusBarAlignment.Right, -1000);
   item.name = 'Kiro Usage';
-  item.command = 'kiro-usage.refresh';
+  item.command = 'kiro-usage.statusClick';
   const output = vscode.window.createOutputChannel('Kiro Usage');
   const subscriptions = [item, output];
   let disposed = false;
@@ -21,6 +21,7 @@ function createController(vscode, dependencies = {}) {
   let lastError;
   let lastLoggedCode;
   let settings;
+  let clickTimer;
 
   function readSettings() {
     const config = vscode.workspace.getConfiguration('kiro-usage');
@@ -44,7 +45,7 @@ function createController(vscode, dependencies = {}) {
   function renderSuccess(usage) {
     const level = severity(usage.percent);
     const dot = { low: '🟢', medium: '🟡', high: '🔴', unknown: '⚪' }[level];
-    show(`${dot} ${formatUsage(usage)}`, `Kiro credit usage\nUpdated: ${lastSuccess.at.toLocaleString()}\nClick to refresh`, level === 'high' ? 'statusBarItem.errorBackground' : undefined);
+    show(`${dot} ${formatUsage(usage)}`, `Kiro credit usage\nUpdated: ${lastSuccess.at.toLocaleString()}\nClick to refresh; double-click for daily calendar`, level === 'high' ? 'statusBarItem.errorBackground' : undefined);
   }
 
   function renderError(error) {
@@ -65,7 +66,7 @@ function createController(vscode, dependencies = {}) {
   function scheduleNext() {
     clearTimer();
     if (!disposed && settings.refreshIntervalSeconds > 0) {
-      timer = schedule(() => { timer = undefined; void refresh(); }, settings.refreshIntervalSeconds * 1000);
+      timer = schedule(() => { timer = undefined; void refresh(); }, Math.min(settings.refreshIntervalSeconds * 1000, new Date(now().getFullYear(), now().getMonth(), now().getDate()+1).getTime() - now().getTime()));
     }
   }
 
@@ -102,6 +103,7 @@ function createController(vscode, dependencies = {}) {
       if (lastLoggedCode) output.appendLine(`[${now().toISOString()}] Usage refresh recovered.`);
       lastLoggedCode = undefined;
       renderSuccess(usage);
+      dependencies.onUsage?.(usage, lastSuccess.at);
     }, error => {
       if (disposed || pending !== request) return;
       lastError = classifyError(error);
@@ -149,6 +151,11 @@ function createController(vscode, dependencies = {}) {
     started = true;
     subscriptions.push(
       vscode.commands.registerCommand('kiro-usage.refresh', manualRefresh),
+      vscode.commands.registerCommand('kiro-usage.statusClick', () => {
+        if (clickTimer !== undefined) { unschedule(clickTimer); clickTimer = undefined; dependencies.openCalendar?.(); }
+        else clickTimer = schedule(() => { clickTimer = undefined; void manualRefresh(); }, 450);
+      }),
+      vscode.commands.registerCommand('kiro-usage.openCalendar', () => dependencies.openCalendar?.()),
       vscode.commands.registerCommand('kiro-usage.openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'kiro-usage')),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('kiro-usage')) void restart();
@@ -161,6 +168,7 @@ function createController(vscode, dependencies = {}) {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    if (clickTimer !== undefined) unschedule(clickTimer);
     clearTimer();
     pending?.abort.abort();
     pending = undefined;

@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{csp}}; script-src 'nonce-{{nonce}}';"><link rel="stylesheet" href="{{css}}"><title>Kiro 每日用量</title></head><body>
+<main><header><div><h1>每日 Credit 用量</h1></div><span>KIRO USAGE</span></header>
+<div id="error" role="alert" hidden></div>
+<section class="metrics" aria-label="用量概览"><div><span>本月已记录</span><strong id="monthUsed">—</strong></div><div><span>今日已记录 · 进行中</span><strong id="todayUsed">—</strong></div><div><span>套餐月额度</span><strong id="quota">—</strong></div></section>
+<nav aria-label="月份"><h2 id="monthTitle"></h2><button id="prev" aria-label="上个月">‹</button><button id="current">本月</button><button id="next" aria-label="下个月">›</button></nav>
+<div class="week" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div id="calendar" class="calendar" aria-label="每日用量日历"></div>
+
+</main><script nonce="{{nonce}}" src="{{js}}"></script></body></html>
