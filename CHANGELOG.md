@@ -1,3 +1,10 @@
+## 1.1.0
+
+- Toggle calendar values between credits and percentages by clicking a value.
+- Display two decimal places with aligned percentage units.
+- Export all recorded daily credit data as CSV from the calendar toolbar.
+- Improve narrow and medium-width layouts; validate multiple window aspect ratios.
+
 ## 1.0.0
 
 - Release the daily credit calendar with the purple ghost-and-chart extension icon.

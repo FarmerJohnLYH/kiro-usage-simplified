@@ -1,8 +1,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { createExporter } = require('./export');
 function createCalendar(vscode, context, history) {
   let panel, timer, error, disposed=false;
+  const exportCsv = createExporter(vscode, history);
   async function update() {
     if (!panel || disposed) return;
     try { const state=await history.read(); if(panel) await panel.webview.postMessage({type:'history',state,error,now:new Date().toISOString()}); }
@@ -16,7 +18,7 @@ function createCalendar(vscode, context, history) {
     const css=panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'media','calendar.css'));
     const js=panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri,'media','calendar.js'));
     panel.webview.html=fs.readFileSync(path.join(context.extensionPath,'media','calendar.html'),'utf8').replaceAll('{{csp}}',panel.webview.cspSource).replaceAll('{{nonce}}',nonce).replace('{{css}}',css.toString()).replace('{{js}}',js.toString());
-    panel.webview.onDidReceiveMessage(message=>{if(message?.type==='ready')void update();});
+    panel.webview.onDidReceiveMessage(message=>{if(message?.type==='ready')void update();if(message?.type==='exportCsv'&&!disposed)void exportCsv();});
     timer=setInterval(()=>void update(),30000);
     panel.onDidDispose(()=>{panel=undefined;clearInterval(timer);});
   }

@@ -44,6 +44,8 @@ Requires desktop VS Code 1.85+. For WSL, SSH or containers, install and authenti
 
 ## 每日用量日历 / Daily calendar
 
+点击月历中的用量数字可切换全部用量为百分比，再次点击恢复 credits。用量统一保留两位小数，百分比单位 `%` 在固定列对齐；日期格按当天套餐额度计算，零额度显示 `—`。
+
 双击右下角状态栏打开完整月历；单击仍刷新（等待 450 ms 区分双击）。也可运行 **Kiro Usage: Open Daily Calendar**。状态栏原有图标、文字、颜色与刷新动画保持不变。
 
 - 页面底色、文字、控件使用 VS Code 主题变量，随亮色、暗色、高对比度主题更新。
@@ -55,3 +57,5 @@ Requires desktop VS Code 1.85+. For WSL, SSH or containers, install and authenti
 - 每日颜色采用该日最后采集的套餐额度。未记录与未来日期显示 `—`，不会标成零用量。
 
 自定义颜色：`kiroUsage.calendarLow`、`kiroUsage.calendarMedium`、`kiroUsage.calendarHigh`，可在 `workbench.colorCustomizations` 中覆盖。
+
+点击月历右上角导出图标，可一次导出全部已记录日期的 CSV（含今日当前累计），不受当前月份或百分比显示影响。每行一天，按日期升序，列为 `date`、`credits`、`plan_credits`；未记录日期不补零。
