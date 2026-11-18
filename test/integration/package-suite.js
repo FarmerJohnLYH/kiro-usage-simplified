@@ -9,7 +9,7 @@ async function run() {
   assert.ok(extension, 'Installed VSIX discovered');
   const relative = path.relative(process.env.KIRO_USAGE_PACKAGE_EXTENSIONS, extension.extensionPath);
   assert.ok(relative && !relative.startsWith('..') && !path.isAbsolute(relative), 'Testing installed package, not source checkout');
-  for (const file of ['extension.js', 'src/usage.js', 'src/controller.js', 'src/history.js', 'src/calendar.js', 'media/calendar.html', 'media/calendar.css', 'media/calendar.js']) {
+  for (const file of ['extension.js', 'src/usage.js', 'src/controller.js', 'src/history.js', 'src/calendar.js', 'media/calendar.html', 'media/calendar.css', 'media/calendar.js', 'media/calendar-png.js', 'media/vendor/html-to-image.js', 'src/png.js']) {
     assert.deepEqual(fs.readFileSync(path.join(extension.extensionPath, file)), fs.readFileSync(path.resolve(__dirname, '../..', file)), 'Installed runtime matches source: ' + file);
   }
   const api = await extension.activate();

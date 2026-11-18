@@ -8,9 +8,11 @@ function colors(file){const data=JSON.parse(fs.readFileSync(path.join(themeDir,f
  const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
  try{
  const page=await browser.newPage({viewport:{width:1100,height:900},timezoneId:'Asia/Shanghai'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const html=fs.readFileSync(path.join(root,'media/calendar.html'),'utf8').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/,'').replace(/<link[^>]*>/,'').replace(/<script[^>]*><\/script>/,'');
+ const html=fs.readFileSync(path.join(root,'media/calendar.html'),'utf8').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/,'').replace(/<link[^>]*>/,'').replace(/<script[^>]*><\/script>/g,'');
  await page.setContent(html);await page.addStyleTag({content:fs.readFileSync(path.join(root,'media/calendar.css'),'utf8')});
  await page.evaluate(()=>{window.acquireVsCodeApi=()=>({getState:()=>undefined,setState:s=>{window.savedCalendarState=s},postMessage:m=>{window.lastCalendarMessage=m}})});
+ await page.addScriptTag({content:fs.readFileSync(path.join(root,'media/vendor/html-to-image.js'),'utf8')});
+ await page.addScriptTag({content:fs.readFileSync(path.join(root,'media/calendar-png.js'),'utf8')});
  await page.addScriptTag({content:fs.readFileSync(path.join(root,'media/calendar.js'),'utf8')});
  const days={};[4,8,12,26.4,0,6.3,9.8,null,22.6,20,5.4].forEach((used,i)=>{if(used!==null)days['2026-11-'+String(i+1).padStart(2,'0')]={used,quota:220,partial:true,first:'2026-11-01T00:00:00Z',last:'2026-11-11T01:40:00Z'}});
  await page.evaluate(state=>window.postMessage({type:'history',state,now:'2026-11-11T01:40:00Z'},'*'),{days,gaps:[],last:{total:220,at:'2026-11-11T01:40:00Z'}});await page.locator('#current').click();
@@ -20,6 +22,21 @@ function colors(file){const data=JSON.parse(fs.readFileSync(path.join(themeDir,f
  const actual=await page.evaluate(()=>getComputedStyle(document.body).backgroundColor);const expected=c['editor.background'];assert.equal(actual,`rgb(${parseInt(expected.slice(1,3),16)}, ${parseInt(expected.slice(3,5),16)}, ${parseInt(expected.slice(5,7),16)})`);
  assert.equal(await page.locator('#timezone,.legend,#gaps,#detail,#updated').count(),0);assert.doesNotMatch(await page.locator('main').innerText(),/\*|部分记录|首次采集开始记录|Asia\/Shanghai/);assert.equal(await page.locator('.day').count(),30);assert.equal(await page.locator('[data-date="2026-11-02"] .green').count(),1);assert.equal(await page.locator('[data-date="2026-11-10"] .yellow').count(),1);assert.equal(await page.locator('[data-date="2026-11-04"] .red').count(),1);
  await page.locator('[data-date="2026-11-04"]').click();assert.equal(await page.locator('[data-date="2026-11-04"]').getAttribute('aria-pressed'),'true');await page.mouse.move(0,0);await page.screenshot({path:path.join(root,'dist/review/calendar-'+theme+'.png'),fullPage:true});
+ if(process.env.PNG_EXPORT){
+ await page.evaluate(()=>{if(!document.getElementById('test-csp')){const m=document.createElement('meta');m.id='test-csp';m.httpEquiv='Content-Security-Policy';m.content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'nonce-test';";document.head.append(m);}});
+ assert.match(await page.locator('[data-date="2026-11-04"]').evaluate(el=>getComputedStyle(el).backgroundImage),/linear-gradient/);
+ await page.evaluate(()=>{window.lastCalendarMessage=null});
+ await page.locator('main').screenshot({path:path.join(root,'dist/review/ui-'+theme+'.png')});
+ await page.locator('#exportPng').click();
+ await page.waitForFunction(()=>window.lastCalendarMessage?.type==='exportPng',{},{timeout:60000});
+ const payload=await page.evaluate(()=>window.lastCalendarMessage);
+ assert.equal(payload.dpi,800);const bounds=await page.locator('main').boundingBox();assert.equal(payload.width,Math.floor(Math.ceil(bounds.width)*800/96));assert.equal(payload.height,Math.floor(Math.ceil(bounds.height)*800/96));assert.equal(payload.month,'2026-11');
+ const bytes=require('../src/png').withDpi(Buffer.from(payload.data,'base64'));
+ fs.writeFileSync(path.join(root,'dist/review/share-'+theme+'.png'),bytes);
+ console.log('PNG EXPORT',theme,bytes.length,'bytes');
+ await page.evaluate(()=>window.postMessage({type:'exportPngDone'},'*'));
+ await page.waitForFunction(()=>!document.getElementById('exportPng').hasAttribute('aria-busy'));
+ }
  await page.locator('[data-date="2026-11-04"] .amount').click();
  assert.equal(await page.locator('[data-date="2026-11-04"] .amount').textContent(),'12.00%');
  assert.equal(await page.locator('[data-date="2026-11-01"] .amount').textContent(),'1.82%');
