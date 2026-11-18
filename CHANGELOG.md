@@ -1,8 +1,8 @@
-## 1.1.0
-
-## Unreleased
+## 1.2.0
 
 - 统一 `kiro usage` 输出通道，记录每次 CLI 命令、原始 stdout/stderr、请求编号和详细执行阶段；连续同类错误不再省略。
+
+## 1.1.0
 
 - Toggle calendar values between credits and percentages by clicking a value.
 - Display two decimal places with aligned percentage units.
