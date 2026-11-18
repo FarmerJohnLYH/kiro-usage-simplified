@@ -31,7 +31,7 @@ Verified / 验证日期：2026-11-08（Asia/Shanghai，UTC+8）。
 | Recovery / 恢复 | Failure after success is stale; last success time retained; next success clears errors; path change drops old account values / 失败标旧、保留成功时间、恢复清错、换路径清缓存 | Unit + hosts / 单元及宿主 |
 | Lifecycle / 生命周期 | Abort on settings change and disposal; ignore late success/rejection; dispose timers, commands, output, UI; repeated start/dispose / 设置变化及退出取消、丢弃过期结果、释放资源、幂等启停 | `test/controller.test.js` |
 | Trust / 信任 | No CLI execution while untrusted; granting trust starts refresh; executable restricted to machine settings / 未信任不执行、信任后启动、路径仅来自机器设置 | Mocked VS Code API + manifest assertions / 模拟 API 与清单检查 |
-| Privacy / 隐私 | Diagnostic logs omit raw output, account data and injected test secret / 日志不包含原始输出、账号或测试密钥 | Assertions on status, notifications and output / 状态、通知和输出断言 |
+| Diagnostics / 诊断 | Output logs retain raw CLI responses and error stacks without redaction; status and notifications remain concise / 输出完整保留原始响应和堆栈，不脱敏；通知保持简短 | Logger, CLI subprocess and controller tests / 日志、CLI 子进程及控制器测试 |
 | Packaging / 打包 | Allowlisted contents; runtime bytes match source; installed extension loaded from extensions directory, not development checkout / 白名单、运行代码字节一致、实际加载安装目录 | VSIX archive inspection + `test:package` / 归档检查和安装包测试 |
 | Publisher migration / 发布者迁移 | `local` and `YuanhaoLiu` packages cannot both register identical commands/settings / 旧本地预览与正式 ID 共存产生重复注册 | Reproduced in an isolated profile; documented uninstall; test profiles now separated by publisher / 已复现并记录卸载步骤，测试配置按发布者隔离 |
 

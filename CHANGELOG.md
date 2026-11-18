@@ -1,5 +1,9 @@
 ## 1.1.0
 
+## Unreleased
+
+- 统一 `kiro usage` 输出通道，记录每次 CLI 命令、原始 stdout/stderr、请求编号和详细执行阶段；连续同类错误不再省略。
+
 - Toggle calendar values between credits and percentages by clicking a value.
 - Display two decimal places with aligned percentage units.
 - Export all recorded daily credit data as CSV from the calendar toolbar.

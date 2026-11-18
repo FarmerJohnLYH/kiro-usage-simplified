@@ -202,11 +202,11 @@ test('missing CLI is silent in background, retries and recovers', async t => {
   const h = harness(t, async () => { if (missing) throw new UsageError('missing'); return usage; });
   h.controller.start(); await tick();
   assert.match(h.item.text, /CLI not found/); assert.equal(h.warnings.length, 0);
-  assert.match(h.item.tooltip, /Install Kiro CLI/); assert.equal(h.logs.length, 1);
-  h.fire(); await tick(); assert.equal(h.logs.length, 1);
+  assert.match(h.item.tooltip, /Install Kiro CLI/); assert.equal(h.logs.filter(line => line.includes('controller.refresh.error')).length, 1);
+  h.fire(); await tick(); assert.equal(h.logs.filter(line => line.includes('controller.refresh.error')).length, 2);
   missing = false; h.fire(); await tick();
   assert.equal(h.item.text, '🟢 25/100 · 25%');
-  assert.equal(h.controller.getStatus().errorCode, undefined); assert.equal(h.logs.length, 2);
+  assert.equal(h.controller.getStatus().errorCode, undefined); assert.ok(h.logs.some(line => line.includes('controller.refresh.recovered')));
 });
 for (const code of ['auth', 'timeout', 'format', 'incompatible', 'output', 'permission', 'failed', 'config']) {
   test(`background failure: ${code}`, async t => {
@@ -235,14 +235,15 @@ test('high usage background clears after recovery to low usage or zero quota', a
   next = { used: 0, total: 0, percent: null }; await h.controller.refresh(); assert.equal(h.item.text, '⚪ 0/0 · n/a');
   next = { used: 60, total: 100, percent: 60 }; await h.controller.refresh(); assert.match(h.item.text, /🟡/);
 });
-test('manual errors offer settings and installation help without leaking CLI output', async t => {
+test('manual errors offer settings and installation help with full logs and concise notifications', async t => {
   const h = harness(t, async () => { throw { stdout: 'private-token=DO-NOT-LOG', stderr: 'Not logged in' }; }, { action: 'Open Settings' });
   h.controller.start(); await tick(); await h.commands.get('kiro-usage.refresh')();
   assert.equal(h.warnings.length, 1); assert.deepEqual(h.executions[0], ['workbench.action.openSettings', 'kiro-usage']);
   h.values.action = 'Installation Guide'; await h.commands.get('kiro-usage.refresh')();
   assert.equal(h.external[0], 'https://kiro.dev/docs/getting-started/installation/');
   h.values.action = undefined; await h.commands.get('kiro-usage.refresh')();
-  assert.doesNotMatch(JSON.stringify([h.logs, h.warnings, h.item]), /DO-NOT-LOG/);
+  assert.doesNotMatch(JSON.stringify([h.warnings, h.item]), /DO-NOT-LOG/);
+  assert.match(h.logs.join('\n'), /DO-NOT-LOG/);
   await h.commands.get('kiro-usage.openSettings')(); assert.equal(h.executions.length, 2);
 });
 test('configuration change aborts old request and discards its late result', async t => {

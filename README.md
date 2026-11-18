@@ -59,3 +59,9 @@ Requires desktop VS Code 1.85+. For WSL, SSH or containers, install and authenti
 自定义颜色：`kiroUsage.calendarLow`、`kiroUsage.calendarMedium`、`kiroUsage.calendarHigh`，可在 `workbench.colorCustomizations` 中覆盖。
 
 点击月历右上角导出图标，可一次导出全部已记录日期的 CSV（含今日当前累计），不受当前月份或百分比显示影响。每行一天，按日期升序，列为 `date`、`credits`、`plan_credits`；未记录日期不补零。
+
+### 运行日志
+
+在 VS Code 的“视图 → 输出”中选择 **kiro usage**。所有模块共用此通道；每次 CLI 执行记录可执行文件、完整参数、工作目录、超时设置，以及收到的全部 stdout/stderr（不脱敏）。CLI 通过 `execFile` 直接启动，不经过 Bash。
+
+日志包含时间戳、请求编号、模块/函数阶段、原始错误及堆栈，覆盖刷新、解析、历史保存、日历和 CSV 导出。相同错误再次发生也会记录。保留现有超时和 1 MiB 捕获上限；达到上限后 CLI 会被终止，日志会说明原因，已收到的输出流仍完整记录。

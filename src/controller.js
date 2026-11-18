@@ -1,3 +1,4 @@
+const { createLogger } = require('./logger');
 const { fetchUsage, classifyError, normalizeSettings, formatUsage, severity } = require('./usage');
 
 const INSTALL_URL = 'https://kiro.dev/docs/getting-started/installation/';
@@ -10,8 +11,10 @@ function createController(vscode, dependencies = {}) {
   const item = vscode.window.createStatusBarItem('kiro-usage', vscode.StatusBarAlignment.Right, -1000);
   item.name = 'Kiro Usage';
   item.command = 'kiro-usage.statusClick';
-  const output = vscode.window.createOutputChannel('Kiro Usage');
-  const subscriptions = [item, output];
+  const output = dependencies.log ? undefined : vscode.window.createOutputChannel('kiro usage');
+  const log = dependencies.log || createLogger(output);
+  const subscriptions = output ? [item, output] : [item];
+  let requestSequence = 0;
   let disposed = false;
   let started = false;
   let timer;
@@ -52,10 +55,8 @@ function createController(vscode, dependencies = {}) {
     const previous = lastSuccess ? `\nLast successful update: ${lastSuccess.at.toLocaleString()}\nPrevious usage: ${formatUsage(lastSuccess.usage)} (stale)` : '';
     const text = lastSuccess ? `$(warning) ${formatUsage(lastSuccess.usage)} (stale)` : `$(warning) Kiro: ${error.label}`;
     show(text, `${error.label}\n${error.message}${previous}\nClick to retry; use Kiro Usage: Open Settings to configure.`, 'statusBarItem.warningBackground');
-    if (lastLoggedCode !== error.code) {
-      output.appendLine(`[${now().toISOString()}] ${error.code}: ${error.message}`);
-      lastLoggedCode = error.code;
-    }
+    log('controller.renderError', error);
+    lastLoggedCode = error.code;
   }
 
   function clearTimer() {
@@ -81,6 +82,7 @@ function createController(vscode, dependencies = {}) {
   }
 
   function refresh(manual = false) {
+    log('controller.refresh.enter', { manual, disposed, pending: Boolean(pending) });
     if (disposed) return Promise.resolve();
     if (pending) {
       if (manual) showManualProgress(pending);
@@ -88,27 +90,33 @@ function createController(vscode, dependencies = {}) {
     }
     clearTimer();
     if (!vscode.workspace.isTrusted) {
+      log('controller.refresh.skipped', 'Workspace untrusted');
       show('$(lock) Kiro: Workspace untrusted', 'Trust this workspace before running Kiro CLI.');
       return Promise.resolve();
     }
-    const request = { abort: new AbortController() };
+    const request = { abort: new AbortController(), id: ++requestSequence };
+    const requestLog = (stage, detail) => log(`request:${request.id} ${stage}`, detail);
+    requestLog('controller.refresh.begin', settings);
     const requestSettings = settings;
     pending = request;
     if (!lastSuccess && !lastError) show('⚪ Kiro', 'Kiro credit usage\nClick to refresh');
     if (manual) showManualProgress(request);
-    request.promise = Promise.resolve().then(() => fetch(requestSettings, request.abort.signal)).then(usage => {
+    request.promise = Promise.resolve().then(() => fetch(requestSettings, request.abort.signal, undefined, requestLog)).then(async usage => {
       if (disposed || pending !== request) return;
       lastSuccess = { usage, at: now() };
       lastError = undefined;
-      if (lastLoggedCode) output.appendLine(`[${now().toISOString()}] Usage refresh recovered.`);
+      if (lastLoggedCode) log('controller.refresh.recovered');
       lastLoggedCode = undefined;
       renderSuccess(usage);
-      dependencies.onUsage?.(usage, lastSuccess.at);
-    }, error => {
+      requestLog('controller.refresh.rendered', usage);
+      await dependencies.onUsage?.(usage, lastSuccess.at);
+    }).catch(error => {
+      requestLog('controller.refresh.error', error);
       if (disposed || pending !== request) return;
       lastError = classifyError(error);
       renderError(lastError);
     }).finally(() => {
+      requestLog('controller.refresh.complete');
       if (pending === request) {
         pending = undefined;
         if (!disposed) scheduleNext();
@@ -135,6 +143,7 @@ function createController(vscode, dependencies = {}) {
     clearTimer();
     const previous = settings;
     settings = readSettings();
+    log('controller.restart.settings', settings);
     if (previous && previous.cliPath !== settings.cliPath) lastSuccess = undefined;
     lastError = undefined;
     if (pending) {
@@ -167,6 +176,7 @@ function createController(vscode, dependencies = {}) {
 
   function dispose() {
     if (disposed) return;
+    log('controller.dispose');
     disposed = true;
     if (clickTimer !== undefined) unschedule(clickTimer);
     clearTimer();

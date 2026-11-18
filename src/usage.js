@@ -91,24 +91,46 @@ function executablePath(value, platform = process.platform) {
   return executable;
 }
 
-async function fetchUsage(settings, signal, run = execute) {
+async function fetchUsage(settings, signal, run = execute, log = () => {}) {
+  let streamed = false;
+  let stage = 'usage.executablePath';
+  const started = Date.now();
   try {
+    log(stage, settings.cliPath);
     const executable = executablePath(settings.cliPath);
+    stage = 'usage.execute';
+    log(stage + '.command', { executable, args: [...CLI_ARGS], shell: false, cwd: homedir(), timeoutMs: settings.timeoutSeconds * 1000 });
     const running = run(executable, [...CLI_ARGS], {
       timeout: settings.timeoutSeconds * 1000, maxBuffer: MAX_BUFFER,
       windowsHide: true, shell: false, cwd: homedir(),
       env: { ...process.env, NO_COLOR: '1', TERM: 'dumb' },
       encoding: 'utf8', signal,
     });
+    if (running.child?.stdout && running.child?.stderr) {
+      streamed = true;
+      running.child.stdout.on('data', chunk => log('usage.execute.stdout', chunk.toString()));
+      running.child.stderr.on('data', chunk => log('usage.execute.stderr', chunk.toString()));
+      running.child.on('close', (code, signal) => log('usage.execute.close', { code, signal, elapsedMs: Date.now() - started }));
+    }
     running.child?.stdin?.end();
     const { stdout, stderr } = await running;
+    if (!streamed) { log('usage.execute.stdout', stdout); log('usage.execute.stderr', stderr); }
+    log('usage.execute.success', { elapsedMs: Date.now() - started });
+    stage = 'usage.parseUsage';
+    log(stage + '.begin');
     try {
-      return parseUsage(stdout);
+      const usage = parseUsage(stdout);
+      log(stage + '.complete', usage);
+      return usage;
     } catch (error) {
+      log(stage + '.error', error);
       const classified = classifyError({ stdout, stderr });
       throw classified.code === 'failed' ? error : classified;
     }
   } catch (error) {
+    if (!streamed && stage === 'usage.execute') { log('usage.execute.stdout', error.stdout); log('usage.execute.stderr', error.stderr); }
+    log(stage + '.error', error);
+    if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') log('usage.execute.outputLimit', 'Process stopped at the 1 MiB capture limit; all stream chunks received were logged.');
     throw classifyError(error);
   }
 }

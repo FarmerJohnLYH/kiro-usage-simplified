@@ -8,23 +8,30 @@ function toCsv(state) {
   }
   return '\uFEFF' + rows.join('\r\n') + '\r\n';
 }
-function createExporter(vscode, history) {
+function createExporter(vscode, history, log = () => {}) {
   let busy = false;
   return async function exportCsv() {
     if (busy) return;
     busy = true;
+    let stage = 'export.readHistory';
     try {
+      log(stage);
       const state = await history.read();
       if (!Object.keys(state.days).length) { await vscode.window.showInformationMessage('暂无可导出的用量数据。'); return; }
+      stage = 'export.toCsv'; log(stage);
       const csv = toCsv(state);
+      stage = 'export.saveDialog'; log(stage);
       const target = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file(path.join(os.homedir(), 'kiro-usage.csv')),
         filters: { CSV: ['csv'] }, saveLabel: '导出', title: '导出全部每日 Credit 用量',
       });
-      if (!target) return;
+      if (!target) { log('export.cancelled'); return; }
+      stage = 'export.writeFile'; log(stage, target.toString());
       await vscode.workspace.fs.writeFile(target, Buffer.from(csv, 'utf8'));
       await vscode.window.showInformationMessage('已导出全部每日 Credit 用量。');
-    } catch {
+      log('export.complete');
+    } catch (error) {
+      log(stage + '.error', error);
       await vscode.window.showErrorMessage('导出失败，请检查数据和保存位置后重试。');
     } finally { busy = false; }
   };

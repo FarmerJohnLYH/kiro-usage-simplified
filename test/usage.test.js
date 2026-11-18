@@ -129,3 +129,17 @@ test('real child: already aborted', async () => {
   abort.abort();
   await assert.rejects(fetchUsage(settings, abort.signal, fixture('sleep')), { code: 'cancelled' });
 });
+
+for (const mode of ['success', 'auth', 'malformed', 'sleep']) {
+  test(`diagnostics preserve command, response and failure stage: ${mode}`, async () => {
+    const events = [];
+    const log = (stage, detail) => events.push({ stage, detail });
+    await fetchUsage({ ...settings, timeoutSeconds: 0.1 }, undefined, fixture(mode), log).catch(() => {});
+    assert.ok(events.some(e => e.stage === 'usage.execute.command' && e.detail.args.join(' ') === CLI_ARGS.join(' ')));
+    const output = events.filter(e => /stdout|stderr/.test(e.stage)).map(e => e.detail).join('');
+    if (mode === 'success') { assert.match(output, /Credits/); assert.ok(events.some(e => e.stage === 'usage.parseUsage.complete')); }
+    if (mode === 'auth') { assert.match(output, /private-token=DO-NOT-LOG/); assert.ok(events.some(e => e.stage === 'usage.execute.error' && e.detail.stack)); }
+    if (mode === 'malformed') { assert.match(output, /something else/); assert.ok(events.some(e => e.stage === 'usage.parseUsage.error')); }
+    if (mode === 'sleep') assert.ok(events.some(e => e.stage === 'usage.execute.error' && e.detail.killed));
+  });
+}

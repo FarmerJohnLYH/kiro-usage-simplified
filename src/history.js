@@ -29,27 +29,31 @@ function accumulate(state, usage, date = new Date(), zone = Intl.DateTimeFormat(
   next.gaps = next.gaps.slice(-400);
   return next;
 }
-function createHistory(directory) {
+function createHistory(directory, log = () => {}) {
   const file = path.join(directory, 'daily-usage-v1.json'), lock = file + '.lock';
   let queue = Promise.resolve();
   async function read() {
+    log('history.read.begin', file);
     try {
       const value = JSON.parse(await fs.readFile(file, 'utf8'));
       if (value.version !== 1 || !value.days || !Array.isArray(value.gaps)) throw new Error('Invalid daily history');
+      log('history.read.complete');
       return value;
-    } catch (e) { if (e.code === 'ENOENT') return { version: 1, days: {}, gaps: [] }; throw e; }
+    } catch (e) { log('history.read.result', e); if (e.code === 'ENOENT') return { version: 1, days: {}, gaps: [] }; throw e; }
   }
   function record(usage, date) {
     const work = queue.catch(() => {}).then(async () => {
+      log('history.record.mkdir', directory);
       await fs.mkdir(directory, { recursive: true });
+      log('history.record.acquireLock', lock);
       let held = false;
       for (let i=0;i<100;i++) {
         try { await fs.mkdir(lock); held=true; break; }
         catch(e) { if(e.code!=='EEXIST') throw e; if(Date.now()-(await fs.stat(lock).catch(()=>({mtimeMs:Date.now()}))).mtimeMs>30000) await fs.rm(lock,{recursive:true,force:true}); await new Promise(r=>setTimeout(r,50)); }
       }
       if(!held) throw new Error('Daily history is busy');
-      try { const next=accumulate(await read(),usage,date); const temp=file+'.'+process.pid+'.tmp'; await fs.writeFile(temp,JSON.stringify(next)); await fs.rename(temp,file); return next; }
-      finally { await fs.rm(lock,{recursive:true,force:true}); }
+      try { const state=await read(); log('history.record.accumulate'); const next=accumulate(state,usage,date); const temp=file+'.'+process.pid+'.tmp'; log('history.record.writeTemp', temp); await fs.writeFile(temp,JSON.stringify(next)); log('history.record.rename', file); await fs.rename(temp,file); return next; }
+      finally { log('history.record.releaseLock', lock); await fs.rm(lock,{recursive:true,force:true}); }
     });
     queue=work; return work;
   }
