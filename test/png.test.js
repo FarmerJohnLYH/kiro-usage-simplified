@@ -18,3 +18,29 @@ test('PNG save handles cancel, write failure and subsequent retry',async()=>{
  const save=createPngExporter(vscode),message={month:'2026-11',data:fixture().toString('base64')};
  assert.equal(await save(message),false);assert.equal(writes,0);action='fail';assert.equal(await save(message),false);assert.equal(errors,1);action='save';assert.equal(await save(message),true);assert.equal(writes,1);assert.equal(await save({...message,month:'../bad'}),false);assert.equal(writes,1);
 });
+
+test('exports a multi-megabyte image and rejects malformed Base64 before saving', async () => {
+  const base = fixture();
+  const input = Buffer.concat([base.subarray(0, -12), chunk('IDAT', Buffer.alloc(4 * 1024 * 1024)), base.subarray(-12)]);
+  const data = input.toString('base64');
+  const errors = [];
+  let writes = 0;
+  const save = createPngExporter({
+    Uri: { file: p => p },
+    window: {
+      showSaveDialog: async () => '/tmp/calendar.png',
+      showInformationMessage: async () => {},
+      showErrorMessage: async () => {}
+    },
+    workspace: { fs: { writeFile: async (_, png) => {
+      assert.deepEqual(png, withDpi(input));
+      writes++;
+    } } }
+  }, (stage, error) => { if (stage.endsWith('.error')) errors.push(error.message); });
+  assert.equal(await save({ month: '2026-11', data }), true);
+  for (const invalid of [data + '=', '=' + data.slice(1), data.slice(0, -4) + 'A===', data.slice(0, -1) + '!']) {
+    assert.equal(await save({ month: '2026-11', data: invalid }), false);
+    assert.equal(errors.pop(), 'Invalid PNG export payload');
+  }
+  assert.equal(writes, 1);
+});

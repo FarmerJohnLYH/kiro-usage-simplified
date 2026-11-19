@@ -40,13 +40,19 @@ function withDpi(input) {
   if (!ended || offset !== input.length) throw new Error('Invalid PNG end');
   return Buffer.concat(parts);
 }
+function isBase64Payload(data) {
+  if (typeof data !== 'string' || !data.length || data.length > 96 * 1024 * 1024 || data.length % 4 !== 0) return false;
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+  // Search for a single invalid character without matching the entire encoded image.
+  return !/[^A-Za-z0-9+/=]/.test(data) && data.indexOf('=') === (padding ? data.length - padding : -1);
+}
 function createPngExporter(vscode, log = () => {}) {
   let busy = false;
   return async message => {
     if (busy) return false;
     busy = true; let stage = 'png.validate';
     try {
-      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(message.month) || typeof message.data !== 'string' || message.data.length > 96 * 1024 * 1024 || !/^[A-Za-z0-9+/]+={0,2}$/.test(message.data)) throw new Error('Invalid PNG export payload');
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(message.month) || !isBase64Payload(message.data)) throw new Error('Invalid PNG export payload');
       const png = withDpi(Buffer.from(message.data, 'base64'));
       const width = png.readUInt32BE(16), height = png.readUInt32BE(20);
       stage = 'png.saveDialog'; log(stage, { month: message.month, width, height, dpi: DPI, bytes: png.length });
