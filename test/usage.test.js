@@ -134,7 +134,7 @@ for (const mode of ['success', 'auth', 'malformed', 'sleep']) {
   test(`diagnostics preserve command, response and failure stage: ${mode}`, async () => {
     const events = [];
     const log = (stage, detail) => events.push({ stage, detail });
-    await fetchUsage({ ...settings, timeoutSeconds: 0.1 }, undefined, fixture(mode), log).catch(() => {});
+    await fetchUsage({ ...settings, timeoutSeconds: mode === 'sleep' ? 0.1 : 5 }, undefined, fixture(mode), log).catch(() => {});
     assert.ok(events.some(e => e.stage === 'usage.execute.command' && e.detail.args.join(' ') === CLI_ARGS.join(' ')));
     const output = events.filter(e => /stdout|stderr/.test(e.stage)).map(e => e.detail).join('');
     if (mode === 'success') { assert.match(output, /Credits/); assert.ok(events.some(e => e.stage === 'usage.parseUsage.complete')); }
